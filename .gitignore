@@ -27,6 +27,9 @@ ENV/
 env/
 .uv/
 
+# pyenv
+.python-version
+
 # Data files
 data/
 !data/.gitkeep
