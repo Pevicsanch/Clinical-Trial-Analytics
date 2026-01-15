@@ -30,12 +30,14 @@ env/
 # pyenv
 .python-version
 
-# Data files
-data/
-!data/.gitkeep
-!data/raw/.gitkeep
-!data/processed/.gitkeep
-!data/database/.gitkeep
+# Data files (only root-level data/)
+/data/
+!/data/.gitkeep
+!/data/raw/.gitkeep
+!/data/interim/.gitkeep
+!/data/processed/.gitkeep
+!/data/external/.gitkeep
+!/data/database/.gitkeep
 
 # Database files
 *.db
@@ -79,3 +81,7 @@ dmypy.json
 # Documentation builds
 docs/_build/
 site/
+
+# Internal planning / agent state (not for public repo)
+STATUS.md
+docs/decision_log_internal.md
