@@ -1,24 +1,13 @@
--- Q1.2 Trial Initiations Over Time by Phase
--- Purpose:
---   Describe how clinical trial initiation volume evolves over time and
---   how the composition of registered studies varies across development phases.
---
--- Methodological notes:
---   - Uses validated start years only (analysis scope: 1990–2025).
---   - Includes all phase groups, including "Not Applicable".
---   - No volume thresholding is applied at query level; any filtering
---     for visualization or readability should be handled downstream.
+-- Q1.2 Trial initiations by year and phase (analysis scope: 1990–2025)
+-- Output shape: one row per (start_year, phase_group)
 
 SELECT
   start_year,
   phase_group,
   COUNT(*) AS trial_count
 FROM v_studies_clean
-WHERE
-  is_start_year_in_scope = 1
-GROUP BY
-  start_year,
-  phase_group
+WHERE is_start_year_in_scope = 1
+GROUP BY start_year, phase_group
 ORDER BY
   start_year,
   CASE phase_group
