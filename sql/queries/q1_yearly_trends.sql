@@ -1,22 +1,34 @@
--- Q1.2 Yearly Trial Initiations
--- Purpose: Count trials by start year to describe initiation volume over time.
--- Note: Completion counts for recent years are expected to be lower due to reporting lag and time-to-completion.
+-- Q1.2 Trial Initiations Over Time by Phase
+-- Purpose:
+--   Describe how clinical trial initiation volume evolves over time and
+--   how the composition of registered studies varies across development phases.
+--
+-- Methodological notes:
+--   - Uses validated start years only (analysis scope: 1990–2025).
+--   - Includes all phase groups, including "Not Applicable".
+--   - No volume thresholding is applied at query level; any filtering
+--     for visualization or readability should be handled downstream.
 
-WITH base AS (
-  SELECT
-    CAST(strftime('%Y', start_date) AS INTEGER) AS start_year,
-    status
-  FROM studies
-  WHERE start_date IS NOT NULL
-    AND start_date != ''
-)
 SELECT
   start_year,
-  COUNT(*) AS trial_count,
-  COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END) AS completed_count,
-  COUNT(CASE WHEN status IN ('RECRUITING', 'NOT_YET_RECRUITING', 'ENROLLING_BY_INVITATION') THEN 1 END) AS recruiting_count
-FROM base
-WHERE start_year BETWEEN 1990 AND 2025
-GROUP BY start_year
-HAVING trial_count >= 5
-ORDER BY start_year;
+  phase_group,
+  COUNT(*) AS trial_count
+FROM v_studies_clean
+WHERE
+  is_start_year_in_scope = 1
+GROUP BY
+  start_year,
+  phase_group
+ORDER BY
+  start_year,
+  CASE phase_group
+    WHEN 'Early Phase 1' THEN 1
+    WHEN 'Phase 1' THEN 2
+    WHEN 'Phase 1/2' THEN 3
+    WHEN 'Phase 2' THEN 4
+    WHEN 'Phase 2/3' THEN 5
+    WHEN 'Phase 3' THEN 6
+    WHEN 'Phase 4' THEN 7
+    WHEN 'Not Applicable' THEN 8
+    ELSE 9
+  END;

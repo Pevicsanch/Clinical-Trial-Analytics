@@ -34,7 +34,8 @@ SELECT
         ELSE status
     END AS status_label,
     COUNT(*) AS trial_count
-FROM studies
+FROM v_studies_clean
+WHERE is_start_year_in_scope = 1
 GROUP BY phase_group, status_label
 ORDER BY
     CASE phase_group
