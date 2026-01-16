@@ -21,9 +21,9 @@ class Settings(BaseSettings):
     # API Configuration
     # ========================================================================
     api_base_url: str = "https://clinicaltrials.gov/api/v2"
-    api_page_size: int = 100  # Reduced to avoid WAF blocking (can increase after testing)
+    api_page_size: int = 10000  # Reduced to avoid WAF blocking (can increase after testing)
     api_max_records: int = 100000
-    api_timeout: int = 30
+    api_timeout: int = 10
 
     # ========================================================================
     # Database Configuration
