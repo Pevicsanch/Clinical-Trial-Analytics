@@ -77,7 +77,7 @@ class ClinicalTrialsAPI:
             # Continue anyway - warm-up is best effort
 
     def _request(self, url: str, params: dict[str, Any]) -> dict[str, Any]:
-        """Make HTTP request with retry logic.
+        """Make HTTP request.
 
         Args:
             url: Request URL.
@@ -90,10 +90,8 @@ class ClinicalTrialsAPI:
             requests.RequestException: If request fails.
         """
         try:
-            # Log request details for debugging
             logger.debug(f"Request URL: {url}, Params: {params}")
-            
-            # Use session (includes cookies from warm-up)
+
             response = self.session.get(
                 url,
                 params=params,
@@ -101,55 +99,74 @@ class ClinicalTrialsAPI:
             )
             response.raise_for_status()
             return response.json()
+
         except requests.HTTPError as e:
-            status_code = e.response.status_code
-            
-            # Don't retry on 403 (WAF blocking) - it will only make it worse
+            resp = e.response
+            status_code = resp.status_code if resp is not None else None
+            reason = getattr(resp, "reason", "") if resp is not None else ""
+
+            # Helpful preview for debugging (avoid huge logs)
+            content_type = (resp.headers.get("content-type", "").lower() if resp is not None else "")
+            text_preview = (resp.text[:500] if resp is not None and hasattr(resp, "text") else "")
+
+            # ------------------------------------------------------------
+            # 403: WAF blocking — do NOT retry
+            # ------------------------------------------------------------
             if status_code == 403:
-                # Check if response is HTML (WAF challenge page) or JSON
-                content_type = e.response.headers.get("content-type", "").lower()
-                response_text = e.response.text[:500]
-                is_html = "text/html" in content_type or response_text.strip().startswith("<")
-                
-                logger.error(
-                    f"API request blocked by WAF (403): {url}"
-                )
-                logger.error(f"Request headers sent: {dict(e.request.headers)}")
+                is_html = "text/html" in content_type or text_preview.strip().startswith("<")
+
+                logger.error(f"API request blocked by WAF (403): {url}")
+                logger.error(f"Request headers sent: {dict(getattr(e.request, 'headers', {}))}")
                 logger.error(f"Response content-type: {content_type}")
-                logger.error(f"Response is HTML: {is_html}")
-                logger.error(f"Response preview: {response_text}")
-                
+                logger.error(f"Response preview: {text_preview}")
+
                 if is_html:
                     logger.error(
-                        "WAF returned HTML challenge page. This suggests:\n"
-                        "  1. Cookie/session issue (warm-up may have failed)\n"
-                        "  2. IP-based blocking\n"
-                        "  3. WAF is blocking this HTTP client fingerprint"
+                        "WAF returned an HTML challenge page. Likely causes:\n"
+                        "  1) Cookie/session issue (warm-up may have failed)\n"
+                        "  2) IP-based blocking\n"
+                        "  3) WAF blocking this HTTP client fingerprint"
                     )
                 else:
                     logger.error(
-                        "WAF returned JSON error. This suggests:\n"
-                        "  1. API key/authentication issue\n"
-                        "  2. Rate limiting\n"
-                        "  3. Invalid request parameters"
+                        "WAF returned a JSON error. Likely causes:\n"
+                        "  1) Invalid request parameters\n"
+                        "  2) Rate limiting\n"
+                        "  3) Server-side validation"
                     )
                 raise
-            
-            # Retry on rate limiting (429) and server errors (5xx)
-            if status_code in (429, 500, 502, 503, 504):
+
+            # ------------------------------------------------------------
+            # 400: often invalid/expired pageToken during deep pagination
+            # Make this fail fast with a clear message (no attribute errors)
+            # ------------------------------------------------------------
+            if status_code == 400 and params.get("pageToken"):
                 logger.warning(
-                    f"API request failed with retryable error: {url} - {status_code} {e.response.reason_phrase}"
+                    "API returned 400 Bad Request with a pageToken. "
+                    "This usually means the token became invalid/expired during deep pagination. "
+                    "Consider lowering --max-records or restarting extraction."
                 )
+                logger.warning(f"URL: {url}")
+                logger.warning(f"Params: {params}")
+                logger.debug(f"Response preview: {text_preview}")
                 raise
-            
-            # Don't retry on other client errors
-            logger.error(
-                f"API request failed: {url} - {status_code} {e.response.reason_phrase}"
-            )
-            logger.error(f"Request headers sent: {dict(e.request.headers)}")
-            logger.debug(f"Response headers: {dict(e.response.headers)}")
-            logger.debug(f"Response body: {e.response.text[:500]}")
+
+            # ------------------------------------------------------------
+            # Retryable errors (caller may implement retry logic)
+            # ------------------------------------------------------------
+            if status_code in (429, 500, 502, 503, 504):
+                logger.warning(f"API request failed with retryable error: {url} - {status_code} {reason}")
+                raise
+
+            # ------------------------------------------------------------
+            # Other client errors
+            # ------------------------------------------------------------
+            logger.error(f"API request failed: {url} - {status_code} {reason}")
+            logger.error(f"Request headers sent: {dict(getattr(e.request, 'headers', {}))}")
+            logger.debug(f"Response content-type: {content_type}")
+            logger.debug(f"Response preview: {text_preview}")
             raise
+
         except requests.RequestException as e:
             logger.error(f"API request failed: {url} - {str(e)}")
             raise
