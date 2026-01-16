@@ -3,6 +3,7 @@
 Main script that orchestrates the complete ETL process.
 """
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -22,18 +23,40 @@ from src.utils.logger import setup_logger
 console = Console()
 
 
+def parse_args() -> argparse.Namespace:
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Clinical Trial Analytics - ETL Pipeline",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--max-records",
+        type=int,
+        default=None,
+        help=f"Maximum number of records to fetch (default: {settings.api_max_records} from settings)",
+    )
+    return parser.parse_args()
+
+
 def main():
     """Run complete ETL pipeline."""
+    # Parse command line arguments
+    args = parse_args()
+
     # Setup logging
     setup_logger()
 
     console.print("\n[bold cyan]Clinical Trial Analytics - ETL Pipeline[/bold cyan]\n")
 
+    # Show configuration
+    max_records = args.max_records or settings.api_max_records
+    console.print(f"Configuration: max_records={max_records:,}\n")
+
     try:
         # 1. EXTRACT
         console.print("[bold yellow]Step 1: Extract[/bold yellow]")
         console.print("Fetching data from ClinicalTrials.gov API...")
-        data_file, metadata_file = extract_raw_data()
+        data_file, metadata_file = extract_raw_data(max_records=args.max_records)
         console.print(f"[green]✓[/green] Raw data saved: {data_file.name}")
         console.print(f"[green]✓[/green] Metadata saved: {metadata_file.name}\n")
 
