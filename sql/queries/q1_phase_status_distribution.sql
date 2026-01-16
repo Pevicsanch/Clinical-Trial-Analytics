@@ -1,7 +1,7 @@
--- Business Question: 1. Trial Landscape Overview
--- Purpose: Analyze the distribution of clinical trials across different phases and statuses.
--- This view helps stakeholders understand the maturity of the pipeline (e.g., how many early vs late stage trials)
--- and the operational status (recruiting, active, completed).
+-- Business Question Q1: Trial Landscape Overview
+-- Purpose: Describe the distribution of clinical trials by development phase and current status.
+-- This query provides a structural snapshot of the dataset, showing how trials are distributed
+-- across early vs. late phases and across operational states (e.g. recruiting, active, completed).
 
 SELECT
     CASE
