@@ -40,30 +40,60 @@ def format_rate_table(
     rate_col: str = 'completion_rate_pct',
     n_col: str = 'n_resolved',
     completed_col: str = 'n_completed',
+    include_ci: bool = True,
+    ci_lower_col: str = 'ci_lower_pct',
+    ci_upper_col: str = 'ci_upper_pct',
+    small_n_threshold: int = 1000,
 ) -> pd.DataFrame:
     """
     Format a rate DataFrame for display (e.g., in Jupyter notebooks).
     
     Takes output from calc_completion_rate() and formats it for presentation:
     - Renames columns to human-readable names
-    - Formats rate as "XX.X%"
+    - Formats rate with 95% CI as "XX.X% [XX.X-XX.X%]"
+    - Flags small sample sizes with asterisk
     
     Parameters:
     -----------
-    df : DataFrame with rate metrics
+    df : DataFrame with rate metrics (from calc_completion_rate)
     factor_col : Column with factor values
     factor_name : Display name for factor column
     rate_col : Column with rate values (0-100 scale)
     n_col : Column with sample size
     completed_col : Column with completed count
+    include_ci : Whether to include CI in output (default: True)
+    ci_lower_col : Column with CI lower bound
+    ci_upper_col : Column with CI upper bound
+    small_n_threshold : Flag n below this with asterisk (default: 1000)
     
     Returns:
     --------
     Formatted DataFrame ready for display()
     """
-    t = df[[factor_col, n_col, completed_col, rate_col]].copy()
-    t[rate_col] = t[rate_col].apply(lambda x: f"{x:.1f}%")
-    t.columns = [factor_name, 'n', 'Completed', 'Rate']
+    # Check if CI columns exist
+    has_ci = ci_lower_col in df.columns and ci_upper_col in df.columns
+    
+    if include_ci and has_ci:
+        t = df[[factor_col, n_col, completed_col, rate_col, ci_lower_col, ci_upper_col]].copy()
+        # Format rate with CI: "85.6% [84.7-86.4%]"
+        t['Rate [95% CI]'] = t.apply(
+            lambda r: f"{r[rate_col]:.1f}% [{r[ci_lower_col]:.1f}-{r[ci_upper_col]:.1f}%]",
+            axis=1
+        )
+        # Flag small n with asterisk
+        t[n_col] = t[n_col].apply(
+            lambda x: f"{x:,}*" if x < small_n_threshold else f"{x:,}"
+        )
+        t = t[[factor_col, n_col, completed_col, 'Rate [95% CI]']]
+        t.columns = [factor_name, 'n', 'Completed', 'Rate [95% CI]']
+    else:
+        t = df[[factor_col, n_col, completed_col, rate_col]].copy()
+        t[rate_col] = t[rate_col].apply(lambda x: f"{x:.1f}%")
+        t[n_col] = t[n_col].apply(
+            lambda x: f"{x:,}*" if x < small_n_threshold else f"{x:,}"
+        )
+        t.columns = [factor_name, 'n', 'Completed', 'Rate']
+    
     return t.reset_index(drop=True)
 
 
@@ -210,6 +240,8 @@ def create_rate_bar_chart(
     colorscale: Optional[list] = None,
     height: int = 400,
     x_title: str = 'Rate (%)',
+    ci_lower_col: Optional[str] = None,
+    ci_upper_col: Optional[str] = None,
 ) -> go.Figure:
     """
     Create a horizontal bar chart for rate/percentage metrics (e.g., completion rate).
@@ -217,6 +249,7 @@ def create_rate_bar_chart(
     Unlike create_horizontal_bar_chart (for counts), this function:
     - Displays pre-calculated percentages directly
     - Shows sample size (n) in hover
+    - Optionally shows confidence interval error bars
     - Uses consistent styling with other viz functions
     
     Parameters:
@@ -231,6 +264,8 @@ def create_rate_bar_chart(
     colorscale : Plotly colorscale (default: blue gradient)
     height : Figure height in pixels
     x_title : X-axis title
+    ci_lower_col : Column with CI lower bound (0-100 scale) for error bars
+    ci_upper_col : Column with CI upper bound (0-100 scale) for error bars
     
     Returns:
     --------
@@ -248,6 +283,19 @@ def create_rate_bar_chart(
     ]
     colors = sample_colorscale(colorscale, ratios)
     
+    # Prepare error bars if CI columns provided
+    error_x = None
+    if ci_lower_col and ci_upper_col and ci_lower_col in df.columns:
+        error_x = dict(
+            type='data',
+            symmetric=False,
+            array=df[ci_upper_col] - df[rate_col],  # Upper error
+            arrayminus=df[rate_col] - df[ci_lower_col],  # Lower error
+            color='rgba(0,0,0,0.4)',
+            thickness=1.5,
+            width=4,
+        )
+    
     # Create figure
     fig = go.Figure(
         go.Bar(
@@ -258,6 +306,7 @@ def create_rate_bar_chart(
             textposition='outside',
             marker_color=colors,
             cliponaxis=False,
+            error_x=error_x,
             hovertemplate=(
                 '<b>%{y}</b><br>'
                 f'{x_title}: %{{x:.1f}}%<br>'
@@ -291,16 +340,16 @@ def create_rate_bar_chart(
         ),
         template='plotly_white',
         height=height,
-        margin=dict(l=150, r=80, t=80, b=100 if note else 50),
+        margin=dict(l=150, r=80, t=80, b=130 if note else 50),
         font=dict(family=FONT_FAMILY, size=12, color=FONT_COLOR),
     )
     
-    # Add note annotation (below x-axis title with more spacing)
+    # Add note annotation (below x-axis title with proper spacing)
     if note:
         fig.add_annotation(
             text=note,
             xref='paper', yref='paper',
-            x=0, y=-0.28,
+            x=0, y=-0.38,
             showarrow=False,
             align='left',
             font=dict(size=10, color=ANNOTATION_COLOR, family=FONT_FAMILY),
@@ -694,6 +743,111 @@ def create_annotated_heatmap(
             text=note,
             xref='paper', yref='paper',
             x=0, y=-0.35,
+            showarrow=False,
+            align='left',
+            font=dict(size=10, color=ANNOTATION_COLOR, family=FONT_FAMILY),
+        )
+    
+    return fig
+
+
+def create_crosstab_heatmap(
+    counts: pd.DataFrame,
+    pct: pd.DataFrame,
+    title: str,
+    subtitle: str,
+    note: Optional[str] = None,
+    height: int = 450,
+    colorscale: str = 'Reds',
+    x_title: str = '',
+    y_title: str = '',
+) -> go.Figure:
+    """
+    Create a heatmap showing counts AND percentages in each cell.
+    
+    Designed for crosstab analysis where both raw counts and row %
+    are informative. Cell text shows "count\\n(pct%)".
+    
+    Parameters:
+    -----------
+    counts : DataFrame of counts (rows × columns)
+    pct : DataFrame of row percentages (same shape as counts)
+    title : Main title
+    subtitle : Subtitle
+    note : Optional footnote
+    height : Figure height
+    colorscale : Plotly colorscale name (default: 'Reds')
+    x_title : X-axis title
+    y_title : Y-axis title
+    
+    Returns:
+    --------
+    Plotly Figure object
+    
+    Example:
+    --------
+    >>> result = calc_crosstab_analysis(df_stopped, 'phase_group', 'failure_type')
+    >>> fig = create_crosstab_heatmap(
+    ...     result['counts'].drop('All'),  # Exclude margin row
+    ...     result['pct_row'],
+    ...     title='Failure Type by Phase',
+    ...     subtitle='Row percentages',
+    ... )
+    """
+    # Build cell annotations (count + percentage)
+    annotations = []
+    for i, row in enumerate(pct.index):
+        for j, col in enumerate(pct.columns):
+            p = pct.loc[row, col]
+            c = counts.loc[row, col] if row in counts.index else 0
+            annotations.append(
+                dict(
+                    x=j,
+                    y=i,
+                    text=f"{c:,}<br>({p:.0f}%)",
+                    showarrow=False,
+                    font=dict(
+                        color='white' if p > 50 else 'black',
+                        size=10,
+                        family=FONT_FAMILY,
+                    )
+                )
+            )
+    
+    fig = go.Figure(data=go.Heatmap(
+        z=pct.values,
+        x=list(pct.columns),
+        y=list(pct.index),
+        colorscale=colorscale,
+        showscale=True,
+        colorbar=dict(title='%', len=0.6),
+    ))
+    
+    fig.update_layout(
+        title=dict(
+            text=f'<b>{title}</b><br><sub>{subtitle}</sub>',
+            font=dict(size=16, family=FONT_FAMILY, color=FONT_COLOR),
+        ),
+        xaxis=dict(
+            title=x_title,
+            tickfont=dict(size=11, family=FONT_FAMILY),
+        ),
+        yaxis=dict(
+            title=y_title,
+            tickfont=dict(size=11, family=FONT_FAMILY),
+            autorange='reversed',
+        ),
+        template='plotly_white',
+        height=height,
+        annotations=annotations,
+        margin=dict(l=120, r=80, t=80, b=60),
+    )
+    
+    if note:
+        fig.add_annotation(
+            text=note,
+            xref='paper', yref='paper',
+            x=0, y=-0.18,
             showarrow=False,
             align='left',
             font=dict(size=10, color=ANNOTATION_COLOR, family=FONT_FAMILY),
