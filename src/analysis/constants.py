@@ -8,6 +8,35 @@ These are analytical decisions, not visualization settings.
 """
 
 # ============================================================
+# Phase Order (Individual Phases)
+# ============================================================
+# Clinical development order for individual phase display
+
+PHASE_ORDER = [
+    'Early Phase 1',
+    'Phase 1',
+    'Phase 1/2',
+    'Phase 2',
+    'Phase 2/3',
+    'Phase 3',
+    'Phase 4',
+    'Not Applicable',
+    'Other',
+]
+
+# For charts that exclude non-phase-designated studies
+PHASE_ORDER_CLINICAL = [
+    'Early Phase 1',
+    'Phase 1',
+    'Phase 1/2',
+    'Phase 2',
+    'Phase 2/3',
+    'Phase 3',
+    'Phase 4',
+]
+
+
+# ============================================================
 # Phase Aggregation
 # ============================================================
 # Maps 9 registry phases → 3 pipeline stages (+ Not Applicable/Other)
@@ -25,7 +54,7 @@ PHASE_AGG_MAP = {
     'Other': 'Other',
 }
 
-# Display order for aggregated phases (excludes Not Applicable for trend charts)
+# Display order for aggregated phases (excludes Not Applicable)
 PHASE_AGG_ORDER = [
     'Early (Early Phase 1 + Phase 1)',
     'Mid (Phase 1/2 + Phase 2 + Phase 2/3)',
@@ -74,4 +103,23 @@ STATUS_AGG_COLORS = {
     'Active/Recruiting': '#3b82f6',  # Blue
     'Stopped': '#ef4444',         # Red
     'Unknown/Other': '#9ca3af',   # Gray
+}
+
+
+# ============================================================
+# Outcome Colors (for Q2 Completion Analysis)
+# ============================================================
+# Semantic colors for trial outcomes
+
+OUTCOME_COLORS = {
+    'Completed': '#22c55e',      # Green (success)
+    'Stopped': '#ef4444',        # Red (failure)
+    'Active': '#3b82f6',         # Blue (ongoing)
+}
+
+# Failure type breakdown
+FAILURE_COLORS = {
+    'Terminated': '#ef4444',     # Red
+    'Withdrawn': '#f97316',      # Orange
+    'Suspended': '#eab308',      # Yellow
 }

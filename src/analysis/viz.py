@@ -165,6 +165,116 @@ def create_horizontal_bar_chart(
     return fig
 
 
+def create_rate_bar_chart(
+    data: pd.DataFrame,
+    rate_col: str,
+    label_col: str,
+    n_col: str,
+    title: str,
+    subtitle: str,
+    note: Optional[str] = None,
+    colorscale: Optional[list] = None,
+    height: int = 400,
+    x_title: str = 'Rate (%)',
+) -> go.Figure:
+    """
+    Create a horizontal bar chart for rate/percentage metrics (e.g., completion rate).
+    
+    Unlike create_horizontal_bar_chart (for counts), this function:
+    - Displays pre-calculated percentages directly
+    - Shows sample size (n) in hover
+    - Uses consistent styling with other viz functions
+    
+    Parameters:
+    -----------
+    data : DataFrame with rate_col, label_col, and n_col
+    rate_col : Column with pre-calculated rate (0-100 scale)
+    label_col : Column for bar labels (y-axis)
+    n_col : Column with sample size for hover info
+    title : Main title (bold)
+    subtitle : Subtitle (smaller, gray)
+    note : Optional footnote annotation
+    colorscale : Plotly colorscale (default: blue gradient)
+    height : Figure height in pixels
+    x_title : X-axis title
+    
+    Returns:
+    --------
+    Plotly Figure object
+    """
+    df = data.copy()
+    colorscale = colorscale or COLORSCALE
+    
+    # Color gradient based on rate
+    min_v = float(df[rate_col].min())
+    max_v = float(df[rate_col].max())
+    ratios = [
+        (float(v) - min_v) / (max_v - min_v) if max_v > min_v else 1.0
+        for v in df[rate_col]
+    ]
+    colors = sample_colorscale(colorscale, ratios)
+    
+    # Create figure
+    fig = go.Figure(
+        go.Bar(
+            x=df[rate_col],
+            y=df[label_col],
+            orientation='h',
+            text=df[rate_col].apply(lambda x: f"{x:.1f}%"),
+            textposition='outside',
+            marker_color=colors,
+            cliponaxis=False,
+            hovertemplate=(
+                '<b>%{y}</b><br>'
+                f'{x_title}: %{{x:.1f}}%<br>'
+                'n=%{customdata:,}<extra></extra>'
+            ),
+            customdata=df[n_col],
+        )
+    )
+    
+    fig.update_layout(
+        title=dict(
+            text=(
+                f"<b>{title}</b><br>"
+                f"<span style='font-size:12px; color:{ANNOTATION_COLOR}'>{subtitle}</span>"
+            ),
+            x=0.5,
+            xanchor='center',
+            font=dict(family=FONT_FAMILY, size=16, color=FONT_COLOR),
+        ),
+        xaxis=dict(
+            title=x_title,
+            showgrid=True,
+            gridcolor='#f3f4f6',
+            zeroline=False,
+            range=[0, 105],  # Leave room for labels
+        ),
+        yaxis=dict(
+            title=None,
+            showgrid=False,
+            # No autorange='reversed' - caller controls order via data sorting
+        ),
+        template='plotly_white',
+        height=height,
+        margin=dict(l=150, r=80, t=80, b=100 if note else 50),
+        font=dict(family=FONT_FAMILY, size=12, color=FONT_COLOR),
+    )
+    
+    # Add note annotation (below x-axis title with more spacing)
+    if note:
+        fig.add_annotation(
+            text=note,
+            xref='paper', yref='paper',
+            x=0, y=-0.28,
+            showarrow=False,
+            align='left',
+            font=dict(size=10, color=ANNOTATION_COLOR, family=FONT_FAMILY),
+        )
+    
+    return fig
+
+
 def create_multi_line_chart(
     pivot_data: pd.DataFrame,
     title: str,

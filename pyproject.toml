@@ -8,34 +8,28 @@ dependencies = [
     # API & HTTP
     "requests>=2.32.3",
     "tenacity>=9.1.2",
-
     # Data Processing (Polars-first, pandas for compatibility)
     "polars>=1.37.1",
     "pandas>=2.3.3",
     "pyarrow>=22.0.0",
     "numpy>=2.4.1",
     "python-dateutil>=2.9.0",
-
     # Database
     "sqlalchemy>=2.0.45",
-
     # Charts (for notebooks)
     "plotly>=6.5.2",
-
     # Statistics
     "statsmodels>=0.14.6",
-
     # Configuration & Validation
     "pydantic>=2.12.5",
     "pydantic-settings>=2.12.0",
     "python-dotenv>=1.2.1",
-
     # CLI & Logging
     "rich>=14.2.0",
     "loguru>=0.7.2",
-
     # Task runner
     "poethepoet>=0.40.0",
+    "scikit-learn>=1.8.0",
 ]
 
 [dependency-groups]
