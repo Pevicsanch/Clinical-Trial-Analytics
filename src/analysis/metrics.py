@@ -101,7 +101,7 @@ def calc_completion_rate(
     # dropna=False keeps NA as a separate group (caller decides how to label)
     stats = (
         resolved
-        .groupby(group_col, dropna=False)
+        .groupby(group_col, dropna=False, observed=False)
         .agg(
             n_resolved=('study_id', 'nunique'),
             n_completed=('is_completed', 'sum')
@@ -226,7 +226,7 @@ def calc_enrollment_presence(
     >>> presence = calc_enrollment_presence(df_stopped, 'failure_type')
     >>> # Shows Withdrawn has ~99% missing enrollment (failure to launch)
     """
-    stats = df.groupby(group_col).agg(
+    stats = df.groupby(group_col, observed=False).agg(
         n_total=('study_id', 'count'),
         n_with_enrollment=(
             enrollment_col, lambda x: (x > 0).sum()
