@@ -21,24 +21,33 @@ def calc_completion_rate(
     
     Parameters:
     -----------
-    df : ABT dataframe (full, will be filtered to resolved)
-    group_col : Column to group by
+    df : DataFrame with required columns:
+        - study_id : unique trial identifier
+        - is_resolved : 1 if Completed or Stopped, 0 if Active
+        - is_completed : 1 if Completed, 0 otherwise
+    group_col : Column to group by (NA values kept as separate group)
     min_n : Minimum sample size to include group (default: 20)
     
     Returns:
     --------
-    DataFrame with columns: [group_col, n_resolved, n_completed, completion_rate]
-    Sorted by n_resolved descending (caller can re-sort as needed).
+    DataFrame with columns:
+        - {group_col} : grouping variable (NA preserved, caller can rename)
+        - n_resolved : count of resolved trials in group
+        - n_completed : count of completed trials in group
+        - completion_rate_pct : percentage (0–100 scale)
+    
+    Sorted by n_resolved descending (neutral; caller can re-sort by rate).
     
     Example:
     --------
     >>> phase_rates = calc_completion_rate(df_abt, 'phase_group')
-    >>> phase_rates.sort_values('completion_rate', ascending=False)
+    >>> phase_rates.sort_values('completion_rate_pct', ascending=False)
     """
     # Filter to resolved trials only (exclude Active)
     resolved = df[df['is_resolved'] == 1].copy()
     
     # Use nunique for study_id to guard against accidental duplicates
+    # dropna=False keeps NA as a separate group (caller decides how to label)
     stats = (
         resolved
         .groupby(group_col, dropna=False)
@@ -49,8 +58,8 @@ def calc_completion_rate(
         .reset_index()
     )
     
-    # Calculate rate (0-100 scale)
-    stats['completion_rate'] = stats['n_completed'] / stats['n_resolved'] * 100
+    # Calculate rate as percentage (0-100 scale, stakeholder friendly)
+    stats['completion_rate_pct'] = stats['n_completed'] / stats['n_resolved'] * 100
     
     # Filter small groups (statistical reliability)
     stats = stats[stats['n_resolved'] >= min_n].copy()
