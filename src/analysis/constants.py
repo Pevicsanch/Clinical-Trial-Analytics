@@ -35,6 +35,16 @@ PHASE_ORDER_CLINICAL = [
     'Phase 4',
 ]
 
+# Enrollment size buckets (ascending order)
+ENROLLMENT_ORDER = [
+    'Unknown',
+    '<50',
+    '50-99',
+    '100-499',
+    '500-999',
+    '1000+',
+]
+
 
 # ============================================================
 # Phase Aggregation

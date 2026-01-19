@@ -33,6 +33,40 @@ DEFAULT_COLORS = ['#2563eb', '#dc2626', '#16a34a', '#9333ea', '#ea580c', '#0891b
 # Helper Functions
 # ============================================================
 
+def format_rate_table(
+    df: pd.DataFrame,
+    factor_col: str,
+    factor_name: str,
+    rate_col: str = 'completion_rate_pct',
+    n_col: str = 'n_resolved',
+    completed_col: str = 'n_completed',
+) -> pd.DataFrame:
+    """
+    Format a rate DataFrame for display (e.g., in Jupyter notebooks).
+    
+    Takes output from calc_completion_rate() and formats it for presentation:
+    - Renames columns to human-readable names
+    - Formats rate as "XX.X%"
+    
+    Parameters:
+    -----------
+    df : DataFrame with rate metrics
+    factor_col : Column with factor values
+    factor_name : Display name for factor column
+    rate_col : Column with rate values (0-100 scale)
+    n_col : Column with sample size
+    completed_col : Column with completed count
+    
+    Returns:
+    --------
+    Formatted DataFrame ready for display()
+    """
+    t = df[[factor_col, n_col, completed_col, rate_col]].copy()
+    t[rate_col] = t[rate_col].apply(lambda x: f"{x:.1f}%")
+    t.columns = [factor_name, 'n', 'Completed', 'Rate']
+    return t.reset_index(drop=True)
+
+
 def format_pct_label(value: float, total: float, include_count: bool = True) -> str:
     """
     Format a percentage label with smart decimal handling.
