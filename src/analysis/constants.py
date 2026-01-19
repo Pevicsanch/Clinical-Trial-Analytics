@@ -128,8 +128,18 @@ OUTCOME_COLORS = {
 }
 
 # Failure type breakdown
+FAILURE_TYPES = ['Terminated', 'Withdrawn', 'Suspended']
+
 FAILURE_COLORS = {
     'Terminated': '#ef4444',     # Red
     'Withdrawn': '#f97316',      # Orange
     'Suspended': '#eab308',      # Yellow
 }
+
+
+# ============================================================
+# Temporal Cohorts (for trend analysis)
+# ============================================================
+
+COHORT_BINS = [1989, 1999, 2009, 2019, 2026]
+COHORT_LABELS = ['1990-1999', '2000-2009', '2010-2019', '2020-2025']

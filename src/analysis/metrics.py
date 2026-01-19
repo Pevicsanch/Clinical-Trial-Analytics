@@ -312,3 +312,48 @@ def calc_crosstab_analysis(
         result['test'] = test_rate_difference(df, row_col, col_col)
     
     return result
+
+
+def create_sponsor_category(lead_agency_class: pd.Series) -> pd.Series:
+    """
+    Create binary sponsor category from lead_agency_class.
+    
+    Parameters:
+    -----------
+    lead_agency_class : Series with sponsor class values
+    
+    Returns:
+    --------
+    Series with 'Industry' or 'Other'
+    
+    Note: 'Other' includes academic, government, non-profit, and missing.
+    """
+    return lead_agency_class.apply(
+        lambda x: 'Industry' if x == 'INDUSTRY' else 'Other'
+    )
+
+
+def create_start_cohorts(
+    start_year: pd.Series,
+    bins: list = None,
+    labels: list = None,
+) -> pd.Series:
+    """
+    Create start-year cohorts for temporal analysis.
+    
+    Parameters:
+    -----------
+    start_year : Series with start years
+    bins : List of bin edges (default: [1989, 1999, 2009, 2019, 2026])
+    labels : List of labels (default: ['1990-1999', '2000-2009', ...])
+    
+    Returns:
+    --------
+    Categorical Series with cohort labels
+    """
+    from src.analysis.constants import COHORT_BINS, COHORT_LABELS
+    
+    bins = bins or COHORT_BINS
+    labels = labels or COHORT_LABELS
+    
+    return pd.cut(start_year, bins=bins, labels=labels)

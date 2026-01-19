@@ -358,6 +358,76 @@ def create_rate_bar_chart(
     return fig
 
 
+def create_simple_line_chart(
+    df: pd.DataFrame,
+    x_col: str,
+    y_col: str,
+    title: str,
+    subtitle: Optional[str] = None,
+    y_title: Optional[str] = None,
+    n_col: Optional[str] = None,
+    height: int = 350,
+    y_range: Optional[list] = None,
+    color: str = '#2563eb',
+) -> go.Figure:
+    """
+    Create a simple single-line chart.
+    
+    Parameters:
+    -----------
+    df : DataFrame with x and y columns
+    x_col : Column for x-axis
+    y_col : Column for y-axis values
+    title : Main title
+    subtitle : Optional subtitle
+    y_title : Y-axis label
+    n_col : Optional column with counts for hover
+    height : Figure height
+    y_range : Optional [min, max] for y-axis
+    color : Line color
+    
+    Returns:
+    --------
+    Plotly Figure object
+    """
+    fig = go.Figure()
+    
+    hover_template = f'Year: %{{x}}<br>Rate: %{{y:.1f}}%'
+    if n_col and n_col in df.columns:
+        hover_template += '<br>n=%{customdata:,}'
+        customdata = df[n_col]
+    else:
+        customdata = None
+    hover_template += '<extra></extra>'
+    
+    fig.add_trace(go.Scatter(
+        x=df[x_col],
+        y=df[y_col],
+        mode='lines+markers',
+        line=dict(color=color, width=2),
+        marker=dict(size=6),
+        hovertemplate=hover_template,
+        customdata=customdata,
+    ))
+    
+    title_text = f'<b>{title}</b>'
+    if subtitle:
+        title_text += f'<br><span style="font-size:12px;color:{ANNOTATION_COLOR}">{subtitle}</span>'
+    
+    fig.update_layout(
+        title=dict(text=title_text, x=0.5, xanchor='center'),
+        xaxis_title=None,
+        yaxis_title=y_title,
+        yaxis=dict(range=y_range) if y_range else {},
+        template='plotly_white',
+        height=height,
+        margin=dict(l=60, r=40, t=80, b=60),
+        font=dict(family=FONT_FAMILY, color=FONT_COLOR),
+    )
+    
+    return fig
+
+
 def create_multi_line_chart(
     pivot_data: pd.DataFrame,
     title: str,
@@ -569,6 +639,68 @@ def create_stacked_area_chart(
             align='left',
             font=dict(size=10, color=ANNOTATION_COLOR, family=FONT_FAMILY),
         )
+    
+    return fig
+
+
+def create_stacked_bar_chart(
+    df: pd.DataFrame,
+    x_col: str,
+    y_col: str,
+    color_col: str,
+    color_map: dict,
+    title: str,
+    subtitle: Optional[str] = None,
+    x_title: Optional[str] = None,
+    y_title: Optional[str] = None,
+    height: int = 400,
+) -> go.Figure:
+    """
+    Create a stacked bar chart for composition analysis.
+    
+    Parameters:
+    -----------
+    df : DataFrame in long format with x, y, and color columns
+    x_col : Column for x-axis (categories)
+    y_col : Column for y-axis values (percentages)
+    color_col : Column for color grouping
+    color_map : Dict mapping color_col values to colors
+    title : Main title
+    subtitle : Optional subtitle
+    x_title : X-axis label
+    y_title : Y-axis label
+    height : Figure height
+    
+    Returns:
+    --------
+    Plotly Figure object
+    """
+    import plotly.express as px
+    
+    fig = px.bar(
+        df,
+        x=x_col,
+        y=y_col,
+        color=color_col,
+        color_discrete_map=color_map,
+        title=f'<b>{title}</b>' + (f'<br><sub>{subtitle}</sub>' if subtitle else ''),
+        labels={x_col: x_title or '', y_col: y_title or ''},
+        template='plotly_white',
+        height=height,
+    )
+    
+    fig.update_layout(
+        barmode='stack',
+        legend=dict(
+            title=color_col,
+            orientation='h',
+            y=-0.15,
+            x=0.5,
+            xanchor='center'
+        ),
+        margin=dict(l=60, r=40, t=60, b=80),
+        font=dict(family=FONT_FAMILY, color=FONT_COLOR),
+    )
     
     return fig
 
