@@ -883,6 +883,206 @@ def create_annotated_heatmap(
     return fig
 
 
+# ============================================================
+# Diagnostic Plot Functions
+# ============================================================
+
+def create_linearity_check_chart(
+    data: pd.DataFrame,
+    x_col: str,
+    y_col: str,
+    n_col: Optional[str] = None,
+    title: str = 'Linearity Check: log(Enrollment) vs Log-Odds of Completion',
+    height: int = 350,
+    color: str = '#2563eb',
+) -> go.Figure:
+    """
+    Create a scatter + line plot for checking linearity in the logit.
+    
+    Used for logistic regression diagnostics: plots empirical logit against
+    a continuous predictor (binned into deciles) to verify linear relationship.
+    
+    Parameters:
+    -----------
+    data : DataFrame with x, y, and optionally n columns (binned stats)
+    x_col : Column for x-axis (mean predictor value per bin)
+    y_col : Column for y-axis (empirical logit per bin)
+    n_col : Optional column with bin sizes for hover
+    title : Chart title
+    height : Figure height
+    color : Line and marker color
+    
+    Returns:
+    --------
+    Plotly Figure object
+    """
+    fig = go.Figure()
+    
+    hover_template = f'{x_col}: %{{x:.2f}}<br>Empirical logit: %{{y:.2f}}'
+    if n_col and n_col in data.columns:
+        hover_template += '<br>n=%{customdata:,}'
+        customdata = data[n_col]
+    else:
+        customdata = None
+    hover_template += '<extra></extra>'
+    
+    fig.add_trace(go.Scatter(
+        x=data[x_col],
+        y=data[y_col],
+        mode='markers+lines',
+        marker=dict(size=8, color=color),
+        line=dict(color=color, width=2),
+        name='Empirical logit',
+        customdata=customdata,
+        hovertemplate=hover_template,
+    ))
+    
+    fig.update_layout(
+        title=f'<b>{title}</b>',
+        xaxis_title=x_col,
+        yaxis_title='Empirical Logit',
+        template='plotly_white',
+        height=height,
+        showlegend=False,
+        font=dict(family=FONT_FAMILY, color=FONT_COLOR),
+        margin=dict(l=60, r=40, t=60, b=50),
+    )
+    
+    return fig
+
+
+def create_calibration_chart(
+    calibration_data: pd.DataFrame,
+    predicted_col: str = 'mean_predicted',
+    observed_col: str = 'observed_rate',
+    n_col: str = 'n',
+    title: str = 'Calibration Plot: Predicted vs Observed Completion Rate',
+    height: int = 400,
+) -> go.Figure:
+    """
+    Create a calibration plot comparing predicted probabilities to observed rates.
+    
+    Points sized by sample size, with a 45-degree perfect calibration line.
+    
+    Parameters:
+    -----------
+    calibration_data : DataFrame with predicted, observed, and n columns (binned)
+    predicted_col : Column with mean predicted probability per bin
+    observed_col : Column with observed rate per bin
+    n_col : Column with sample size per bin
+    title : Chart title
+    height : Figure height
+    
+    Returns:
+    --------
+    Plotly Figure object
+    """
+    fig = go.Figure()
+    
+    # Calibration points
+    fig.add_trace(go.Scatter(
+        x=calibration_data[predicted_col],
+        y=calibration_data[observed_col],
+        mode='markers',
+        marker=dict(
+            size=calibration_data[n_col] / 50,
+            color='#2563eb',
+            line=dict(width=1, color='white'),
+        ),
+        name='Observed vs Predicted',
+        hovertemplate=(
+            f'Predicted: %{{x:.2f}}<br>'
+            f'Observed: %{{y:.2f}}<br>'
+            f'n=%{{customdata:,}}<extra></extra>'
+        ),
+        customdata=calibration_data[n_col],
+    ))
+    
+    # Perfect calibration line (45-degree)
+    fig.add_trace(go.Scatter(
+        x=[0, 1],
+        y=[0, 1],
+        mode='lines',
+        line=dict(color='#dc2626', width=2, dash='dash'),
+        name='Perfect calibration',
+        hoverinfo='skip',
+    ))
+    
+    fig.update_layout(
+        title=f'<b>{title}</b>',
+        xaxis_title='Mean Predicted Probability',
+        yaxis_title='Observed Completion Rate',
+        xaxis=dict(range=[0, 1]),
+        yaxis=dict(range=[0, 1]),
+        template='plotly_white',
+        height=height,
+        showlegend=True,
+        font=dict(family=FONT_FAMILY, color=FONT_COLOR),
+        margin=dict(l=60, r=40, t=60, b=50),
+    )
+    
+    return fig
+
+
+def create_cooks_distance_chart(
+    cooks_d: np.ndarray,
+    threshold: float,
+    title: str = "Cook's Distance: Influence of Individual Observations",
+    height: int = 350,
+) -> go.Figure:
+    """
+    Create a scatter plot for Cook's distance diagnostic.
+    
+    Visualizes influence of individual observations on regression coefficients.
+    Points are colored by Cook's D value, with a threshold line.
+    
+    Parameters:
+    -----------
+    cooks_d : Array of Cook's distance values
+    threshold : Threshold value for influential observations (typically 4/n)
+    title : Chart title
+    height : Figure height
+    
+    Returns:
+    --------
+    Plotly Figure object
+    """
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatter(
+        x=list(range(len(cooks_d))),
+        y=cooks_d,
+        mode='markers',
+        marker=dict(
+            size=4,
+            color=cooks_d,
+            colorscale='Reds',
+            showscale=True,
+            colorbar=dict(title="Cook's D"),
+        ),
+        hovertemplate="Index: %{x}<br>Cook's D: %{y:.6f}<extra></extra>",
+    ))
+    
+    fig.add_hline(
+        y=threshold,
+        line_dash='dash',
+        line_color='red',
+        annotation_text=f'Threshold: {threshold:.6f}',
+    )
+    
+    fig.update_layout(
+        title=f'<b>{title}</b>',
+        xaxis_title='Observation Index',
+        yaxis_title="Cook's Distance",
+        template='plotly_white',
+        height=height,
+        font=dict(family=FONT_FAMILY, color=FONT_COLOR),
+        margin=dict(l=60, r=40, t=60, b=50),
+    )
+    
+    return fig
+
+
 def create_crosstab_heatmap(
     counts: pd.DataFrame,
     pct: pd.DataFrame,

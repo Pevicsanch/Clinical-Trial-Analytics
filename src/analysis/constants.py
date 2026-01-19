@@ -81,6 +81,24 @@ PHASE_AGG_COLORS = {
 
 
 # ============================================================
+# Status Order (Individual Statuses)
+# ============================================================
+# Display order for individual registry statuses
+
+STATUS_ORDER = [
+    'Completed',
+    'Recruiting',
+    'Active, not recruiting',
+    'Not yet recruiting',
+    'Enrolling by invitation',
+    'Terminated',
+    'Withdrawn',
+    'Suspended',
+    'Unknown',
+]
+
+
+# ============================================================
 # Status Aggregation
 # ============================================================
 # Maps 10 registry statuses → 4 semantic groups
