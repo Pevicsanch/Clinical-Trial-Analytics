@@ -814,3 +814,272 @@ def assess_temporal_missingness(
         'severity': severity,
         'warning': warning,
     }
+
+
+# ============================================================
+# Group Comparison Analysis
+# ============================================================
+
+def summarize_by_group(
+    df: pd.DataFrame,
+    group_col: str,
+    value_col: str = "enrollment",
+    order: list[str] | None = None,
+) -> pd.DataFrame:
+    """
+    Create descriptive summary table by group.
+    
+    Parameters:
+    -----------
+    df : DataFrame with group and value columns
+    group_col : Column to group by
+    value_col : Numeric column to summarize (default: 'enrollment')
+    order : Optional list to order groups
+    
+    Returns:
+    --------
+    DataFrame with columns: N, Median, Mean, Q1, Q3
+    Index is the group column.
+    
+    Example:
+    --------
+    >>> summary = summarize_by_group(df_enr, "phase_group", order=PHASE_ORDER_CLINICAL)
+    """
+    summary = (
+        df
+        .groupby(group_col)[value_col]
+        .agg(
+            N="count",
+            Median="median",
+            Mean="mean",
+            Q1=lambda x: x.quantile(0.25),
+            Q3=lambda x: x.quantile(0.75),
+        )
+        .round(1)
+    )
+    
+    if order is not None:
+        # Reindex with order, keeping only groups that exist
+        valid_order = [g for g in order if g in summary.index]
+        extra = [g for g in summary.index if g not in order]
+        summary = summary.reindex(valid_order + extra)
+    
+    return summary.dropna(subset=["N"])
+
+
+def kruskal_with_epsilon(
+    df: pd.DataFrame,
+    group_col: str,
+    value_col: str = "enrollment",
+) -> dict:
+    """
+    Run Kruskal-Wallis H-test and compute epsilon-squared effect size.
+    
+    Parameters:
+    -----------
+    df : DataFrame with group and value columns
+    group_col : Column defining groups
+    value_col : Numeric column to compare (default: 'enrollment')
+    
+    Returns:
+    --------
+    dict with:
+        - h_stat : Kruskal-Wallis H statistic
+        - p_value : p-value
+        - k : number of groups
+        - n : total sample size
+        - epsilon_sq : epsilon-squared effect size
+        - effect_label : 'negligible', 'small', 'medium', or 'large'
+    
+    Notes:
+    ------
+    Epsilon-squared (ε²) is recommended for Kruskal-Wallis (Tomczak & Tomczak, 2014).
+    Interpretation thresholds (approximate, from Cohen 1988 adapted):
+        - ε² < 0.01 : negligible
+        - ε² < 0.06 : small
+        - ε² < 0.14 : medium
+        - ε² >= 0.14 : large
+    
+    Example:
+    --------
+    >>> result = kruskal_with_epsilon(df_enr, "phase_group")
+    >>> print(f"ε² = {result['epsilon_sq']:.4f} ({result['effect_label']})")
+    """
+    from scipy.stats import kruskal
+    
+    groups = [g[value_col].values for _, g in df.groupby(group_col)]
+    h_stat, p_value = kruskal(*groups)
+    
+    n = len(df)
+    k = len(groups)
+    epsilon_sq = (h_stat - k + 1) / (n - k)
+    
+    # Interpret effect size
+    effect_label = interpret_effect_size(epsilon_sq, metric="epsilon2")
+    
+    return {
+        'h_stat': h_stat,
+        'p_value': p_value,
+        'k': k,
+        'n': n,
+        'epsilon_sq': epsilon_sq,
+        'effect_label': effect_label,
+    }
+
+
+def pairwise_mannwhitney(
+    df: pd.DataFrame,
+    group_col: str,
+    value_col: str = "enrollment",
+    pairs: list[tuple[str, str]] | None = None,
+    correction: str = "bonferroni",
+) -> pd.DataFrame:
+    """
+    Run pairwise Mann-Whitney U tests with multiple comparison correction.
+    
+    Parameters:
+    -----------
+    df : DataFrame with group and value columns
+    group_col : Column defining groups
+    value_col : Numeric column to compare (default: 'enrollment')
+    pairs : List of (group1, group2) tuples to compare.
+            If None, compares all pairs.
+    correction : Multiple comparison method ('bonferroni' or 'none')
+    
+    Returns:
+    --------
+    DataFrame with columns:
+        - Comparison : "Group1 vs Group2"
+        - U : Mann-Whitney U statistic
+        - p_value : raw p-value
+        - p_adj : adjusted p-value (if correction applied)
+        - r : rank-biserial correlation (effect size)
+        - effect_label : interpretation of |r|
+        - sig : significance stars (*** < 0.001, ** < 0.01, * < 0.05)
+    
+    Example:
+    --------
+    >>> posthoc = pairwise_mannwhitney(
+    ...     df_phase, "phase_group",
+    ...     pairs=[("Phase 1", "Phase 3"), ("Phase 2", "Phase 3")],
+    ... )
+    """
+    from scipy.stats import mannwhitneyu
+    from itertools import combinations
+    
+    # Get unique groups
+    groups = df[group_col].unique()
+    group_data = {g: df.loc[df[group_col] == g, value_col].values for g in groups}
+    
+    # Determine pairs to test
+    if pairs is None:
+        pairs = list(combinations(groups, 2))
+    else:
+        # Filter to valid pairs
+        pairs = [(p1, p2) for p1, p2 in pairs if p1 in group_data and p2 in group_data]
+    
+    if not pairs:
+        return pd.DataFrame()
+    
+    results = []
+    for g1, g2 in pairs:
+        d1, d2 = group_data[g1], group_data[g2]
+        u, p = mannwhitneyu(d1, d2, alternative="two-sided")
+        n1, n2 = len(d1), len(d2)
+        
+        # Rank-biserial correlation as effect size
+        r = 1 - (2 * u) / (n1 * n2)
+        
+        results.append({
+            'Comparison': f"{g1} vs {g2}",
+            'n1': n1,
+            'n2': n2,
+            'U': u,
+            'p_value': p,
+            'r': r,
+        })
+    
+    df_results = pd.DataFrame(results)
+    
+    # Apply correction
+    n_tests = len(df_results)
+    if correction == "bonferroni" and n_tests > 1:
+        df_results['p_adj'] = (df_results['p_value'] * n_tests).clip(upper=1.0)
+        p_col = 'p_adj'
+    else:
+        df_results['p_adj'] = df_results['p_value']
+        p_col = 'p_value'
+    
+    # Effect size interpretation
+    df_results['effect_label'] = df_results['r'].abs().apply(
+        lambda x: interpret_effect_size(x, metric="r")
+    )
+    
+    # Significance stars
+    df_results['sig'] = df_results[p_col].apply(
+        lambda p: "***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else ""
+    )
+    
+    return df_results
+
+
+def analyze_enrollment_by_factor(
+    df: pd.DataFrame,
+    group_col: str,
+    value_col: str = "enrollment",
+    order: list[str] | None = None,
+    posthoc_pairs: list[tuple[str, str]] | None = None,
+) -> dict:
+    """
+    Complete enrollment analysis by a categorical factor.
+    
+    Combines descriptive summary, Kruskal-Wallis test, and optional post-hoc comparisons.
+    
+    Parameters:
+    -----------
+    df : DataFrame with group and value columns (should be pre-filtered)
+    group_col : Column defining groups
+    value_col : Numeric column to analyze (default: 'enrollment')
+    order : Optional list to order groups in summary
+    posthoc_pairs : Optional list of (group1, group2) pairs for post-hoc tests
+    
+    Returns:
+    --------
+    dict with:
+        - summary : DataFrame with descriptive statistics
+        - test : dict with Kruskal-Wallis results and epsilon_sq
+        - posthoc : DataFrame with pairwise comparisons (if posthoc_pairs provided)
+        - n_total : total sample size
+        - n_groups : number of groups
+    
+    Example:
+    --------
+    >>> result = analyze_enrollment_by_factor(
+    ...     df_phase, "phase_group",
+    ...     order=PHASE_ORDER_CLINICAL,
+    ...     posthoc_pairs=[("Phase 1", "Phase 3")],
+    ... )
+    >>> epsilon_sq_phase = result['test']['epsilon_sq']
+    """
+    # Filter to non-null group values
+    df_clean = df[df[group_col].notna()].copy()
+    
+    # Descriptive summary
+    summary = summarize_by_group(df_clean, group_col, value_col, order=order)
+    
+    # Kruskal-Wallis test
+    test = kruskal_with_epsilon(df_clean, group_col, value_col)
+    
+    # Optional post-hoc
+    posthoc = None
+    if posthoc_pairs:
+        posthoc = pairwise_mannwhitney(df_clean, group_col, value_col, pairs=posthoc_pairs)
+    
+    return {
+        'summary': summary,
+        'test': test,
+        'posthoc': posthoc,
+        'n_total': len(df_clean),
+        'n_groups': test['k'],
+        'n_excluded': len(df) - len(df_clean),
+    }
