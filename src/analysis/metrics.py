@@ -357,3 +357,57 @@ def create_start_cohorts(
     labels = labels or COHORT_LABELS
     
     return pd.cut(start_year, bins=bins, labels=labels)
+
+
+def calc_missingness_by_dimension(
+    df: pd.DataFrame,
+    dim: str,
+    flag_col: str = "has_enrollment",
+    label_map: dict | None = None,
+    min_n: int = 50,
+) -> pd.DataFrame:
+    """
+    Calculate % missing (flag=0) by a categorical dimension.
+    
+    Used for selection bias assessment before conditioning on data availability.
+    
+    Parameters:
+    -----------
+    df : DataFrame with the dimension and flag columns
+    dim : Column name to group by (e.g., 'phase_group', 'is_industry_sponsor')
+    flag_col : Binary column where 1=present, 0=missing (default: 'has_enrollment')
+    label_map : Optional dict to map raw values to readable labels
+    min_n : Minimum group size to include (filters noisy small groups)
+    
+    Returns:
+    --------
+    DataFrame with columns: [dim, n, pct_missing]
+    Sorted by pct_missing descending.
+    
+    Example:
+    --------
+    >>> phase_miss = calc_missingness_by_dimension(df_abt, 'phase_group')
+    >>> sponsor_miss = calc_missingness_by_dimension(
+    ...     df_abt, 'is_industry_sponsor', 
+    ...     label_map={1: 'Industry', 0: 'Non-industry'}
+    ... )
+    """
+    if dim not in df.columns:
+        raise KeyError(f"Column not found: {dim}")
+    
+    out = (
+        df.groupby(dim, dropna=False)
+        .agg(
+            n=("study_id", "count"),
+            pct_missing=(flag_col, lambda s: (1 - s.mean()) * 100),
+        )
+        .reset_index()
+    )
+    
+    if label_map is not None:
+        out[dim] = out[dim].map(label_map).fillna(out[dim])
+    
+    out = out[out["n"] >= min_n].copy()
+    out = out.sort_values("pct_missing", ascending=False)
+    
+    return out

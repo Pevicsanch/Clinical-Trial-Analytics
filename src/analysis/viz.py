@@ -1186,3 +1186,218 @@ def create_crosstab_heatmap(
         )
     
     return fig
+
+
+def create_distribution_comparison(
+    data: pd.Series,
+    log_data: pd.Series,
+    title: str = "Enrollment Distribution",
+    subtitle: Optional[str] = None,
+    height: int = 380,
+    nbins: int = 50,
+) -> go.Figure:
+    """
+    Create side-by-side histograms comparing original and log-transformed distributions.
+    
+    Used to demonstrate why log-transformation is appropriate for heavy-tailed data.
+    
+    Parameters:
+    -----------
+    data : Series with original values (e.g., enrollment)
+    log_data : Series with log-transformed values (e.g., log(enrollment+1))
+    title : Main title
+    subtitle : Optional subtitle
+    height : Figure height
+    nbins : Number of histogram bins
+    
+    Returns:
+    --------
+    Plotly Figure object with two subplots
+    
+    Example:
+    --------
+    >>> fig = create_distribution_comparison(
+    ...     df_enr['enrollment'],
+    ...     df_enr['log_enrollment'],
+    ...     title='Enrollment Distribution',
+    ...     subtitle=f'n = {len(df_enr):,} trials'
+    ... )
+    """
+    from plotly.subplots import make_subplots
+    
+    # Calculate statistics
+    median_raw = data.median()
+    median_log = log_data.dropna().median()
+    
+    fig = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=('Original Scale', 'Log-Transformed'),
+        horizontal_spacing=0.12,
+    )
+    
+    # Original scale histogram
+    fig.add_trace(
+        go.Histogram(
+            x=data,
+            nbinsx=nbins,
+            marker=dict(color=DEFAULT_COLORS[0], line=dict(width=0)),
+            opacity=0.85,
+            name='Enrollment',
+            hovertemplate='Enrollment: %{x:,.0f}<br>Count: %{y:,}<extra></extra>',
+        ),
+        row=1, col=1
+    )
+    
+    # Median line (original)
+    fig.add_vline(
+        x=median_raw,
+        line=dict(dash='dash', color='#dc2626', width=2),
+        row=1, col=1
+    )
+    fig.add_annotation(
+        x=median_raw,
+        y=1,
+        yref='y domain',
+        text=f'Median: {median_raw:,.0f}',
+        showarrow=False,
+        yshift=10,
+        font=dict(size=11, color='#dc2626', family=FONT_FAMILY),
+        row=1, col=1
+    )
+    
+    # Log-transformed histogram
+    fig.add_trace(
+        go.Histogram(
+            x=log_data.dropna(),
+            nbinsx=nbins,
+            marker=dict(color=DEFAULT_COLORS[2], line=dict(width=0)),
+            opacity=0.85,
+            name='Log(Enrollment)',
+            hovertemplate='Log(enroll+1): %{x:.2f}<br>Count: %{y:,}<extra></extra>',
+        ),
+        row=1, col=2
+    )
+    
+    # Median line (log)
+    fig.add_vline(
+        x=median_log,
+        line=dict(dash='dash', color='#dc2626', width=2),
+        row=1, col=2
+    )
+    fig.add_annotation(
+        x=median_log,
+        y=1,
+        yref='y2 domain',
+        text=f'Median: {median_log:.2f}',
+        showarrow=False,
+        yshift=10,
+        font=dict(size=11, color='#dc2626', family=FONT_FAMILY),
+        row=1, col=2
+    )
+    
+    # Axis labels
+    fig.update_xaxes(title_text='Enrollment', row=1, col=1)
+    fig.update_xaxes(title_text='log(Enrollment + 1)', row=1, col=2)
+    fig.update_yaxes(title_text='Frequency', row=1, col=1)
+    fig.update_yaxes(title_text='Frequency', row=1, col=2)
+    
+    # Title
+    title_text = f'<b>{title}</b>'
+    if subtitle:
+        title_text += f'<br><span style="font-size:12px;color:{ANNOTATION_COLOR}">{subtitle}</span>'
+    
+    fig.update_layout(
+        title=dict(text=title_text, x=0.5, xanchor='center'),
+        template='plotly_white',
+        height=height,
+        showlegend=False,
+        margin=dict(l=60, r=40, t=90, b=60),
+        font=dict(family=FONT_FAMILY, color=FONT_COLOR),
+    )
+    
+    # Style subplot titles
+    for annotation in fig['layout']['annotations']:
+        if annotation['text'] in ['Original Scale', 'Log-Transformed']:
+            annotation['font'] = dict(size=13, family=FONT_FAMILY, color=FONT_COLOR)
+    
+    return fig
+
+
+def create_grouped_box_plot(
+    df: pd.DataFrame,
+    x_col: str,
+    y_col: str,
+    category_order: list,
+    title: str,
+    subtitle: Optional[str] = None,
+    y_log: bool = True,
+    height: int = 400,
+    color: str = '#2563eb',
+) -> go.Figure:
+    """
+    Create a simple grouped box plot for comparing distributions across categories.
+    
+    Designed as a visual confirmation of tabular/statistical findings, not primary evidence.
+    Uses consistent single color and minimal styling.
+    
+    Parameters:
+    -----------
+    df : DataFrame with data
+    x_col : Column for x-axis categories
+    y_col : Column for y-axis values
+    category_order : List of categories in display order (filters to only these)
+    title : Main title
+    subtitle : Optional subtitle
+    y_log : Whether to use log scale on y-axis (default: True for skewed data)
+    height : Figure height
+    color : Box color (single color for all, keeps focus on pattern)
+    
+    Returns:
+    --------
+    Plotly Figure object
+    
+    Example:
+    --------
+    >>> fig = create_grouped_box_plot(
+    ...     df_enr, 'phase_group', 'enrollment',
+    ...     category_order=['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4'],
+    ...     title='Enrollment by Phase',
+    ...     subtitle='Log scale, clinical phases only'
+    ... )
+    """
+    # Filter to specified categories only
+    df_plot = df[df[x_col].isin(category_order)].copy()
+    
+    fig = go.Figure()
+    
+    for category in category_order:
+        data = df_plot[df_plot[x_col] == category][y_col]
+        if len(data) > 0:
+            fig.add_trace(go.Box(
+                y=data,
+                name=category,
+                marker=dict(color=color, opacity=0.6),
+                line=dict(color=color),
+                boxmean=False,
+                showlegend=False,
+                hovertemplate=f'{category}<br>Value: %{{y:,.0f}}<extra></extra>',
+            ))
+    
+    # Title
+    title_text = f'<b>{title}</b>'
+    if subtitle:
+        title_text += f'<br><span style="font-size:12px;color:{ANNOTATION_COLOR}">{subtitle}</span>'
+    
+    fig.update_layout(
+        title=dict(text=title_text, x=0.5, xanchor='center'),
+        xaxis_title=None,
+        yaxis_title=y_col.replace('_', ' ').title(),
+        yaxis_type='log' if y_log else 'linear',
+        template='plotly_white',
+        height=height,
+        margin=dict(l=60, r=40, t=80, b=60),
+        font=dict(family=FONT_FAMILY, color=FONT_COLOR),
+        xaxis_tickangle=-30,
+    )
+    
+    return fig
