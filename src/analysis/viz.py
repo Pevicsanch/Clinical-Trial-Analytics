@@ -1323,6 +1323,121 @@ def create_distribution_comparison(
     return fig
 
 
+def create_condition_ranking_chart(
+    df: pd.DataFrame,
+    y_col: str,
+    x_col: str,
+    title: str,
+    subtitle: str,
+    x_title: str,
+    hover_fields: list[tuple[str, str, str]],
+    reference_line: Optional[tuple[float, str]] = None,
+    height: int = 520,
+    color: str = None,
+    left_margin: int = 240,
+) -> go.Figure:
+    """
+    Create a horizontal bar chart for ranking conditions by a metric.
+    
+    Designed for Section 4 of Q3 (therapeutic profiling), but generalizable
+    to any condition/category ranking with rich hover information.
+    
+    Parameters:
+    -----------
+    df : DataFrame with condition data (already sorted in desired order)
+    y_col : Column for y-axis labels (e.g., 'condition_name')
+    x_col : Column for x-axis values (e.g., 'total_enrollment', 'trial_count')
+    title : Main title (bold)
+    subtitle : Subtitle (smaller, gray)
+    x_title : X-axis label
+    hover_fields : List of (col_name, display_name, format_spec) tuples for hover
+                   format_spec: ':,.0f' for integers, ':.1f%' for percentages, etc.
+    reference_line : Optional (value, label) tuple for a vertical reference line
+    height : Figure height in pixels
+    color : Bar color (default: DEFAULT_COLORS[0])
+    left_margin : Left margin for long labels
+    
+    Returns:
+    --------
+    Plotly Figure object
+    
+    Example:
+    --------
+    >>> fig = create_condition_ranking_chart(
+    ...     df=top_15.sort_values('total_enrollment', ascending=True),
+    ...     y_col='condition_name',
+    ...     x_col='total_enrollment',
+    ...     title='Top 15 Conditions by Cumulative Enrollment',
+    ...     subtitle='Patient volume · ≥50 trials per condition',
+    ...     x_title='Total Enrollment',
+    ...     hover_fields=[
+    ...         ('trial_count', 'Trials', ':,.0f'),
+    ...         ('median_enrollment', 'Median', ':,.0f'),
+    ...         ('top1_share', 'Top-1 %', ':.1f%'),
+    ...     ],
+    ... )
+    """
+    color = color or DEFAULT_COLORS[0]
+    
+    # Build customdata array and hovertemplate
+    if hover_fields:
+        customdata = np.stack([df[col].values for col, _, _ in hover_fields], axis=-1)
+        hover_parts = [f"<b>%{{y}}</b><br>{x_title}: %{{x:,.0f}}"]
+        for i, (_, display_name, fmt) in enumerate(hover_fields):
+            # Handle percentage format specially
+            if '%' in fmt:
+                hover_parts.append(f"{display_name}: %{{customdata[{i}]{fmt.replace('%', '')}}}")
+            else:
+                hover_parts.append(f"{display_name}: %{{customdata[{i}]{fmt}}}")
+        hovertemplate = "<br>".join(hover_parts) + "<extra></extra>"
+    else:
+        customdata = None
+        hovertemplate = f"<b>%{{y}}</b><br>{x_title}: %{{x:,.0f}}<extra></extra>"
+    
+    fig = go.Figure()
+    
+    fig.add_trace(go.Bar(
+        y=df[y_col],
+        x=df[x_col],
+        orientation='h',
+        marker_color=color,
+        text=df[x_col].map(lambda v: f"{v:,.0f}"),
+        textposition='outside',
+        customdata=customdata,
+        hovertemplate=hovertemplate,
+    ))
+    
+    # Optional reference line
+    if reference_line:
+        ref_value, ref_label = reference_line
+        fig.add_vline(
+            x=ref_value,
+            line_dash='dash',
+            line_color='gray',
+            annotation_text=ref_label,
+            annotation_position='top',
+        )
+    
+    fig.update_layout(
+        title=dict(
+            text=(
+                f"<b>{title}</b><br>"
+                f"<span style='font-size:12px;color:{ANNOTATION_COLOR}'>{subtitle}</span>"
+            ),
+            x=0.5,
+            xanchor='center',
+        ),
+        xaxis_title=x_title,
+        yaxis_title=None,
+        template='plotly_white',
+        height=height,
+        margin=dict(l=left_margin, r=100, t=80, b=60),
+        font=dict(family=FONT_FAMILY, color=FONT_COLOR),
+    )
+    
+    return fig
+
+
 def create_grouped_box_plot(
     df: pd.DataFrame,
     x_col: str,
