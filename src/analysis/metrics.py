@@ -796,7 +796,7 @@ def assess_temporal_missingness(
     # Assess severity
     if range_pp > substantial_thresh:
         severity = "substantial"
-        warning = "⚠️ **Warning:** Temporal analyses may be biased by time-varying selection."
+        warning = "**Warning:** Temporal analyses may be biased by time-varying selection."
     elif range_pp > moderate_thresh:
         severity = "moderate"
         warning = "Temporal analyses should be interpreted with caution due to time-varying missingness."
