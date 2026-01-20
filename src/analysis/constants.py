@@ -161,3 +161,50 @@ FAILURE_COLORS = {
 
 COHORT_BINS = [1989, 1999, 2009, 2019, 2026]
 COHORT_LABELS = ['1990-1999', '2000-2009', '2010-2019', '2020-2025']
+
+
+# ============================================================
+# Enrollment Type Buckets (for Q3 analysis)
+# ============================================================
+# Standard categories for enrollment_type field
+
+ENROLLMENT_TYPE_BUCKETS = ['ACTUAL', 'ANTICIPATED', 'OTHER/UNKNOWN']
+
+
+# ============================================================
+# Missingness Severity Thresholds (percentage points)
+# ============================================================
+# Used for temporal selection bias assessment
+
+MISSINGNESS_THRESHOLD_MODERATE = 5.0    # pp - triggers caution
+MISSINGNESS_THRESHOLD_SUBSTANTIAL = 10.0  # pp - triggers warning
+
+
+# ============================================================
+# Effect Size Thresholds (Cohen, 1988)
+# ============================================================
+# For correlation-type effect sizes (r, Cramér's V, rank-biserial)
+
+EFFECT_SIZE_THRESHOLDS_R = {
+    'negligible': 0.1,
+    'small': 0.3,
+    'medium': 0.5,
+    # >= 0.5 is large
+}
+
+# For variance-explained effect sizes (η², ε²)
+EFFECT_SIZE_THRESHOLDS_ETA2 = {
+    'negligible': 0.01,
+    'small': 0.06,
+    'medium': 0.14,
+    # >= 0.14 is large
+}
+
+
+# ============================================================
+# ABT Validation Defaults
+# ============================================================
+
+ABT_YEAR_RANGE_DEFAULT = (1990, 2026)
+ABT_ID_COLUMN_DEFAULT = 'study_id'
+ABT_YEAR_COLUMN_DEFAULT = 'start_year'
