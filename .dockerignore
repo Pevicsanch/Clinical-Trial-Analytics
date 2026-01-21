@@ -1,0 +1,34 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*.egg-info
+.venv
+venv
+.uv
+
+# Data (mounted as volume)
+data/
+
+# IDE
+.vscode
+.idea
+*.swp
+.DS_Store
+
+# Testing/CI
+.pytest_cache
+.coverage
+htmlcov
+.ruff_cache
+
+# Docs
+*.md
+!README.md
+
+# Misc
+logs/
+*.log

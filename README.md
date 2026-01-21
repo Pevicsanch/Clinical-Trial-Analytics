@@ -2,22 +2,32 @@
 
 Exploratory analysis of clinical trial data from [ClinicalTrials.gov](https://clinicaltrials.gov), the largest public registry of clinical studies.
 
-This project extracts trial metadata via the ClinicalTrials.gov API, loads it into a local SQLite database, and provides a series of Jupyter notebooks that investigate patterns in trial design, completion, enrollment, geography, and duration.
+This project extracts trial metadata via the ClinicalTrials.gov API, loads it into a local SQLite database, and provides Jupyter notebooks that investigate patterns in trial design, completion, enrollment, geography, and duration.
 
 ## Quick Start
 
+### Option 1: Docker (recommended)
+
 ```bash
-# 1. Install dependencies and set up Jupyter kernel
-make install
+git clone <repo-url>
+cd Clinical-Trial-Analytics
 
-# 2. Create database schema
-make setup
+docker compose up
+```
 
-# 3. Download and load data (~10 minutes, ~100K trials)
-make etl
+Open http://localhost:8888 (token: `clinical-trials`)
 
-# 4. Launch notebooks
-make nb
+On first run, the container automatically downloads and loads ~100K trials from ClinicalTrials.gov (~10 minutes). Subsequent starts are instant.
+
+### Option 2: Local installation
+
+Requires Python 3.11+ and [uv](https://github.com/astral-sh/uv).
+
+```bash
+make install    # Install dependencies + Jupyter kernel
+make setup      # Create database schema
+make etl        # Download and load data (~10 min)
+make nb         # Launch Jupyter
 ```
 
 ## What's Inside
@@ -93,6 +103,3 @@ All data comes from the [ClinicalTrials.gov API v2](https://clinicaltrials.gov/d
 - Notebooks use Plotly for interactive charts
 - Analysis is descriptive; causal claims require additional study design information not available in registry data
 
-## License
-
-MIT

@@ -1,0 +1,13 @@
+services:
+  jupyter:
+    build: .
+    ports:
+      - "8888:8888"
+    volumes:
+      # Persist database between restarts
+      - ./data:/app/data
+      # Live-edit notebooks (changes sync to host)
+      - ./notebooks:/app/notebooks
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
