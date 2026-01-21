@@ -87,10 +87,9 @@ make setup        # Create empty database with schema
 make etl          # Run full ETL pipeline
 make nb           # Launch Jupyter notebooks
 
+make test         # Run tests (12 unit tests)
 make check        # Lint code (ruff)
-make test         # Run tests (pytest)
 make clean        # Remove cache files
-make fix-kernels  # Update all notebooks to correct kernel
 ```
 
 ## Data Source
