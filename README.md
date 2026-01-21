@@ -102,4 +102,5 @@ All data comes from the [ClinicalTrials.gov API v2](https://clinicaltrials.gov/d
 - The database is SQLite — portable and requires no server setup
 - Notebooks use Plotly for interactive charts
 - Analysis is descriptive; causal claims require additional study design information not available in registry data
+- See [DEVELOPMENT.md](DEVELOPMENT.md) for notes on the development process and AI-assisted workflow
 
