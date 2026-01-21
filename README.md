@@ -30,17 +30,17 @@ make etl        # Download and load data (~10 min)
 make nb         # Launch Jupyter
 ```
 
-## What's Inside
+## Research Questions
 
-### Notebooks
+Each notebook addresses a specific analytical question:
 
-| Notebook | Focus |
-|----------|-------|
-| `01_trial_landscape_v2` | Overview of trial phases, status distribution, and therapeutic areas |
-| `02_completion_analysis` | Completion vs. termination rates by phase and sponsor type |
-| `03_enrollment_performance` | Target vs. actual enrollment; factors associated with under-enrollment |
-| `04_geographic_insights` | Geographic concentration (HHI), country-level distribution, temporal shifts |
-| `05_duration_analysis` | Trial duration modeling with survival analysis (Kaplan-Meier, Cox PH) |
+| # | Question | Notebook |
+|---|----------|----------|
+| 1 | **Trial Landscape:** What is the distribution of trials by phase, status, and therapeutic area? How has this evolved over time? | `01_trial_landscape_v2` |
+| 2 | **Completion Analysis:** Which factors are associated with higher completion rates? What patterns appear in terminated or withdrawn trials? | `02_completion_analysis` |
+| 3 | **Enrollment Performance:** What are the trends in patient enrollment? Which conditions attract the most participants? | `03_enrollment_performance` |
+| 4 | **Geographic Insights:** How are trials distributed globally? Are there regional specializations in therapeutic areas? | `04_geographic_insights` |
+| 5 | **Duration Analysis:** What is the typical trial duration by phase? Which trials take significantly longer than expected? | `05_duration_analysis` |
 
 Each notebook is self-contained with its own data loading, analysis, and interpretation.
 

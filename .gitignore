@@ -82,6 +82,6 @@ dmypy.json
 docs/_build/
 site/
 
-# Internal planning / agent state (not for public repo)
+# Internal / IDE config
 STATUS.md
-docs/decision_log_internal.md
+.claude/
