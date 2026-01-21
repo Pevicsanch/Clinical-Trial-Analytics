@@ -31,10 +31,14 @@ else
     echo ""
 fi
 
-echo "🚀 Starting Jupyter Notebook..."
+echo "════════════════════════════════════════════════════════════"
 echo ""
-echo "   Open in browser: http://localhost:8888"
-echo "   Token: clinical-trials"
+echo "  ✓ Ready! Open your browser:"
+echo ""
+echo "    URL:   http://localhost:8888"
+echo "    Token: clinical-trials"
+echo ""
+echo "════════════════════════════════════════════════════════════"
 echo ""
 
 exec uv run jupyter notebook \
@@ -43,4 +47,5 @@ exec uv run jupyter notebook \
     --no-browser \
     --allow-root \
     --NotebookApp.token='clinical-trials' \
-    --NotebookApp.notebook_dir='notebooks'
+    --NotebookApp.notebook_dir='notebooks' \
+    --log-level=WARN
