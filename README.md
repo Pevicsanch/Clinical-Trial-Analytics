@@ -30,6 +30,12 @@ make etl        # Download and load data (~10 min)
 make nb         # Launch Jupyter
 ```
 
+### Working in your IDE
+
+Both options persist data locally. After running Docker or the local ETL, you can open the project in your IDE (e.g. VS Code, Cursor, PyCharm) and execute notebooks directly with the pre-populated database.
+
+If you used Docker and want local execution, run `make install` first to set up the Python environment. The database is stored at `data/database/clinical_trials.db`.
+
 ## Research Questions
 
 Each notebook addresses a specific analytical question:
