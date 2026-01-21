@@ -30,6 +30,7 @@ dependencies = [
     # Task runner
     "poethepoet>=0.40.0",
     "scikit-learn>=1.8.0",
+    "lifelines>=0.30.0",
 ]
 
 [dependency-groups]

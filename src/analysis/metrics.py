@@ -912,8 +912,9 @@ def kruskal_with_epsilon(
     
     n = len(df)
     k = len(groups)
-    epsilon_sq = (h_stat - k + 1) / (n - k)
-    
+    # Floor at 0: for k=2 and small H, formula can yield negative values
+    epsilon_sq = max(0.0, (h_stat - k + 1) / (n - k))
+
     # Interpret effect size
     effect_label = interpret_effect_size(epsilon_sq, metric="epsilon2")
     
