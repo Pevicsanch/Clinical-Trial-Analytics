@@ -25,9 +25,10 @@ data/
 htmlcov
 .ruff_cache
 
-# Docs
-*.md
-!README.md
+# Docs (keep README.md, exclude others)
+DEVELOPMENT.md
+STATUS.md
+CHANGELOG.md
 
 # Misc
 logs/
