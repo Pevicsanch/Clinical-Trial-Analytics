@@ -16,14 +16,14 @@ WORKDIR /app
 # Copy dependency files first (better layer caching)
 COPY pyproject.toml uv.lock ./
 
-# Install dependencies
-RUN uv sync --all-groups --frozen
+# Install dependencies only (not the project itself)
+RUN uv sync --all-groups --frozen --no-install-project
 
 # Copy project files
 COPY . .
 
-# Install project in editable mode
-RUN uv pip install -e . --quiet
+# Now install the project in editable mode
+RUN uv sync --all-groups --frozen
 
 # Create data directories
 RUN mkdir -p data/database data/raw
