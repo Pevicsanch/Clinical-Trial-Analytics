@@ -33,7 +33,12 @@ install: ## Install dependencies and register Jupyter kernel
 	@echo "Registering Jupyter kernel '$(KERNEL_NAME)'..."
 	@uv run python -m ipykernel install --user --name=$(KERNEL_NAME) --display-name="Clinical Trials (Python 3.11+)"
 	@echo "\n✓ Installation complete"
-	@echo "  Next: make setup && make etl"
+	@if [ -f "data/database/clinical_trials.db" ] && [ -s "data/database/clinical_trials.db" ]; then \
+		echo "  Database found - ready to use!"; \
+		echo "  Run: make nb"; \
+	else \
+		echo "  Next: make setup && make etl"; \
+	fi
 
 setup: ## Create database schema
 	@$(POE) setup
