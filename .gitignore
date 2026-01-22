@@ -85,3 +85,5 @@ site/
 # Internal / IDE config
 STATUS.md
 .claude/
+# Generated reports (not part of project)
+reports/
